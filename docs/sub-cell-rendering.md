@@ -99,26 +99,36 @@ pinta, serializa. Retorna `string[]` com uma linha por cell-row.
 
 ## Dimensões atuais
 
-| | Cells (x × y) | Sub-pixels canvas (x × y) |
-|---|---|---|
-| Tile | 8 × 3 | **16 × 6** (quadrant) / 16 × 12 (braille) |
-| Dígito (3×5) | ~1.5 × ~2.5 cells visual | 3 × 5 sub-pixels |
-| Label 4 dígitos | ~7.5 cells visual | 15 × 5 sub-pixels |
+| | Cells (x × y) | Sub-pixels canvas (x × y) | Aspecto visual |
+|---|---|---|---|
+| Tile | **10 × 5** | 20 × 10 (quadrant) / 20 × 20 (braille) | ~1:1 (quadrado) |
+| Dígito (3×5) | ~1.5 × ~2.5 cells | 3 × 5 sub-pixels | — |
+| Label 4 dígitos | ~7.5 × ~2.5 cells | 15 × 5 sub-pixels | — |
 
-Com fonte 3×5 em canvas 16×6, a centralização horizontal tem **±0.5 sub-pixel**
-de desvio (= ±0.25 célula visual) — um dígito vai estar sempre 1 sub-pixel
-deslocado para a direita porque `Math.floor((16 - labelWidth)/2)` sempre cai em
-valor par (labels medem 3/7/11/15, todos ímpares, então `(16-W)/2` é sempre
-X.5). Vertical idem.
+**Por que 10×5 e não outro tamanho**: cada célula monoespaçada é ~1:2
+(larg:alt), então `cellsWide ≈ 2 × cellsTall` dá um tile visualmente
+quadrado. 10×5 foi escolhido para equilibrar:
 
-Se quiser **zero desvio** em alguma configuração, a única saída é:
+- **Quadrado visual** (10 × 5 × 2 = 10 × 10).
+- **Padding confortável**: dígito 3×5 no centro deixa cell-row 0 e cell-row 4
+  totalmente vazias (só bg color), dígito aparece nas 3 cells do meio.
+- **Largura total do board** = 4×10 + 3 gaps + 2 padding + 2 border = 47 cols
+  → cabe em 80-col terminal.
+- **Altura total** = 4×5 + 3 gaps + 2 border = 25 linhas, ~30 com HUD/help —
+  aperta em terminais 24-line mas OK em setups modernos.
 
-- Fonte de dígito 2-wide (cabe par, mas fica ilegível), OU
-- Tile mais largo (10 células) com fonte 4-wide — canvas 20×6 acomoda labels
-  até 4 dígitos com padding par.
+**Centralização**: horizontal tem `±0.5 sub-pixel` de desvio para todos
+os labels (porque labels medem 3/7/11/15 sub-pixels, todos ímpares, e canvas
+é sempre par). Vertical idem para dígito 5-tall em canvas 10. Na prática,
+inferior a 0.25 célula — imperceptível.
 
-Optamos pelo compromisso atual por caber em 80 colunas com folga e manter o
-dígito legível.
+Se precisar **zero desvio**:
+
+- Fonte de dígito 4-wide (par) e labels com espaçamento ajustado.
+- Canvas ímpar (inviável com encoding de 2 sub-pixels por cell vertical/horizontal).
+
+O compromisso atual prioriza legibilidade e padding sobre o último 0.25
+célula de alinhamento.
 
 ## Como estender
 

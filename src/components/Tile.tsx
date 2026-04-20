@@ -3,8 +3,8 @@ import { Box, Text } from 'ink';
 import { styleForValue, PULSE_BG } from '../palette';
 import { labelOnTile } from '../canvas';
 
-export const TILE_WIDTH = 8;
-export const TILE_HEIGHT = 3;
+export const TILE_WIDTH = 10;
+export const TILE_HEIGHT = 5;
 
 type Props = {
   value: number;
