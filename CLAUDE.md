@@ -64,6 +64,28 @@ recusa em silêncio via o `LiteralUnion` e o diagnostic fica inconsistente.
 
 Se subir para Ink 7, reavaliar — algumas APIs mudam.
 
+### Rendering dos números (sub-célula)
+
+Os dígitos de cada tile são desenhados como **bitmap pixelado** via caracteres
+Unicode que codificam múltiplos sub-pixels por célula. Isso existe para
+contornar a assimetria de centralização da grade de células — texto ASCII
+comum centraliza com precisão de 1 célula, o bitmap chega a ~0.5 célula.
+
+- **Quadrant** (`U+2580..U+259F`, **padrão**): 2×2 sub-pixels por célula.
+  Visual chunky, tile sólido com número em relevo. Suporte universal.
+- **Braille** (`U+2800..U+28FF`): 2×4 sub-pixels por célula. Visual fino,
+  estilo LCD. Mantido em `src/canvas.ts` como alternativa.
+
+Pipeline: `src/digit-font.ts` (bitmap 3×5 por dígito) → `src/canvas.ts` pinta
+em grid 0/1 → `canvasToQuadrant` / `canvasToBraille` serializa em strings de
+caracteres Unicode, uma string por linha de células. Ver
+[`docs/sub-cell-rendering.md`](docs/sub-cell-rendering.md) para bit layouts,
+alternativas descartadas e como estender.
+
+**Se precisar adicionar caracteres** (ex: `+` para animação de score) a
+entrada vai em `DIGITS` de `digit-font.ts`. Caracteres desconhecidos são
+ignorados em silêncio por `drawLabel`.
+
 ### Commits
 - Antes de commitar: `bun test && bunx tsc --noEmit` precisa estar verde.
 - Mensagem no imperativo, em português, com contexto do "por quê" quando a

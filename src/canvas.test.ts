@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import {
   canvasToBraille,
+  canvasToQuadrant,
   createCanvas,
   drawLabel,
   labelOnTile,
@@ -94,26 +95,64 @@ describe('canvas — drawLabel', () => {
   });
 });
 
-describe('canvas — labelOnTile', () => {
-  it('produces cellsTall lines of braille for a labelless tile', () => {
-    const lines = labelOnTile('', 8, 3);
-    expect(lines.length).toBe(3);
-    expect(lines[0].length).toBe(8);
-    expect(lines.every((l) => [...l].every((ch) => ch === '\u2800'))).toBe(
-      true
-    );
+describe('canvas — canvasToQuadrant', () => {
+  it('encodes empty canvas as spaces', () => {
+    const c = createCanvas(4, 2);
+    const lines = canvasToQuadrant(c);
+    expect(lines).toEqual(['  ']);
   });
 
-  it('paints a single-digit label with near-center placement', () => {
-    const lines = labelOnTile('2', 8, 3);
+  it('encodes a full 2×2 block as U+2588 (full block)', () => {
+    const c = createCanvas(2, 2);
+    for (let r = 0; r < 2; r++) for (let col = 0; col < 2; col++) c[r][col] = 1;
+    expect(canvasToQuadrant(c)[0]).toBe('\u2588');
+  });
+
+  it('encodes upper half as U+2580 and lower half as U+2584', () => {
+    const upper = createCanvas(2, 2);
+    upper[0][0] = 1;
+    upper[0][1] = 1;
+    expect(canvasToQuadrant(upper)[0]).toBe('\u2580');
+
+    const lower = createCanvas(2, 2);
+    lower[1][0] = 1;
+    lower[1][1] = 1;
+    expect(canvasToQuadrant(lower)[0]).toBe('\u2584');
+  });
+
+  it('emits one line per 2 rows of canvas (half of braille)', () => {
+    const c = createCanvas(2, 6);
+    expect(canvasToQuadrant(c).length).toBe(3);
+    expect(canvasToBraille(c).length).toBe(2);
+  });
+});
+
+describe('canvas — labelOnTile', () => {
+  it('defaults to quadrant encoding with cellsTall lines', () => {
+    const lines = labelOnTile('', 8, 3);
     expect(lines.length).toBe(3);
-    // At least one cell in the tile has dots
+    expect([...lines[0]].length).toBe(8);
+    expect([...lines[0]].every((ch) => ch === ' ')).toBe(true);
+  });
+
+  it('produces braille lines when encoding=braille', () => {
+    const lines = labelOnTile('', 8, 3, 'braille');
+    expect(lines.length).toBe(3);
+    expect([...lines[0]].every((ch) => ch === '\u2800')).toBe(true);
+  });
+
+  it('paints a single-digit label somewhere in the tile (quadrant)', () => {
+    const lines = labelOnTile('2', 8, 3, 'quadrant');
+    expect(lines.some((l) => [...l].some((ch) => ch !== ' '))).toBe(true);
+  });
+
+  it('paints a single-digit label somewhere in the tile (braille)', () => {
+    const lines = labelOnTile('2', 8, 3, 'braille');
     expect(lines.some((l) => [...l].some((ch) => ch !== '\u2800'))).toBe(true);
   });
 
-  it('fits a 4-digit label within the canvas without overflow', () => {
-    const lines = labelOnTile('2048', 8, 3);
-    // No line is longer than 8 cells
+  it('fits a 4-digit label within 8 cells of width (quadrant)', () => {
+    const lines = labelOnTile('2048', 8, 3, 'quadrant');
     expect(lines.every((l) => [...l].length === 8)).toBe(true);
   });
 });
