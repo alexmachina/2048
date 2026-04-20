@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { styleForValue, PULSE_BG } from '../palette';
 
-export const TILE_WIDTH = 8;
+export const TILE_WIDTH = 6;
 export const TILE_HEIGHT = 3;
 
 type Props = {
