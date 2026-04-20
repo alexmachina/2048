@@ -1,0 +1,23 @@
+{
+  "name": "2048-terminal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "2048 com Ink + Bun com animações fluidas",
+  "bin": {
+    "2048": "./src/cli.tsx"
+  },
+  "scripts": {
+    "start": "bun run src/cli.tsx",
+    "dev": "bun run src/cli.tsx",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "ink": "^5.2.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/bun": "latest",
+    "typescript": "^5.6.3"
+  }
+}
