@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { styleForValue, PULSE_BG } from '../palette';
+import { usePalette } from '../palette';
 import { labelOnTile } from '../canvas';
 
 export const TILE_WIDTH = 10;
@@ -13,9 +13,10 @@ type Props = {
 };
 
 export function Tile({ value, pulse, dim }: Props) {
-  const style = styleForValue(value);
+  const palette = usePalette();
+  const style = palette.styleForValue(value);
   const label = value === 0 ? '' : String(value);
-  const bg = pulse ? PULSE_BG : style.backgroundColor;
+  const bg = pulse ? palette.pulseBg : style.backgroundColor;
   const fg = pulse ? style.backgroundColor : style.color;
 
   const lines = labelOnTile(label, TILE_WIDTH, TILE_HEIGHT);

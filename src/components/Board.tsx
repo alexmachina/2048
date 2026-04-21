@@ -2,7 +2,7 @@ import React from 'react';
 import { Box } from 'ink';
 import { BOARD_SIZE } from '../engine';
 import { Tile } from './Tile';
-import { BOARD_BORDER } from '../palette';
+import { usePalette } from '../palette';
 import type { DisplayTile } from '../animations';
 
 type Props = {
@@ -10,6 +10,7 @@ type Props = {
 };
 
 export function Board({ displayTiles }: Props) {
+  const palette = usePalette();
   const cells: (DisplayTile | null)[][] = Array.from({ length: BOARD_SIZE }, () =>
     Array(BOARD_SIZE).fill(null)
   );
@@ -29,7 +30,7 @@ export function Board({ displayTiles }: Props) {
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor={BOARD_BORDER}
+      borderColor={palette.boardBorder}
       paddingX={1}
       paddingY={0}
       alignSelf="flex-start"

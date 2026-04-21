@@ -25,7 +25,7 @@ Implementação em terminal do jogo 2048, com Bun e [Ink](https://github.com/vad
 ## Requisitos
 
 - [Bun](https://bun.sh) ≥ 1.3
-- Terminal com suporte a cores 24-bit (a maioria dos terminais modernos serve).
+- Terminal com suporte a cores ANSI (padrão) ou 24-bit (modo `truecolor`).
 
 ## Instalação e execução
 
@@ -39,6 +39,18 @@ Atalhos equivalentes:
 ```bash
 bun run src/cli.tsx
 ```
+
+### Esquema de cores
+
+Por padrão o jogo usa cores ANSI nomeadas, respeitando o tema do terminal.
+Para a paleta hex clássica do 2048 (bege/amarelo/laranja), use `truecolor`:
+
+```bash
+bun run start -- --colors truecolor   # ou: -c truecolor
+bun run start -- --help               # lista as opções
+```
+
+Valores aceitos: `ansi` (padrão), `truecolor`.
 
 ## Controles
 
@@ -58,14 +70,15 @@ um terminal:
 ```
 src/
 ├── engine.ts          — regras puras (slide, merge, spawn, win/lose)
-├── engine.test.ts     — 17 testes de lógica
+├── engine.test.ts     — testes de lógica
 ├── animations.ts      — máquina de estados de frames (sliding → merging → spawning → idle)
-├── animations.test.ts — 9 testes das transições e do render por frame
-├── palette.ts         — cores por valor de tile
+├── animations.test.ts — testes das transições e do render por frame
+├── palette.ts         — esquemas de cor (ansi, truecolor) + PaletteContext
+├── args.ts            — parser de argumentos da CLI
 ├── cli.tsx            — entrypoint: input, loop de frames, layout
 └── components/
     ├── Board.tsx      — grid 4×4
-    ├── Tile.tsx       — célula preenchida (3 linhas × 8 colunas)
+    ├── Tile.tsx       — célula preenchida (TILE_WIDTH × TILE_HEIGHT)
     └── Hud.tsx        — score, best, banners
 ```
 

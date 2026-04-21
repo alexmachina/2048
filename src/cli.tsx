@@ -17,6 +17,8 @@ import {
 } from './animations';
 import { Board } from './components/Board';
 import { Hud, GameBanner } from './components/Hud';
+import { PaletteContext, getPalette } from './palette';
+import { parseCliArgs, USAGE } from './args';
 
 function App() {
   const { exit } = useApp();
@@ -96,4 +98,18 @@ function App() {
   );
 }
 
-render(<App />);
+const parsed = parseCliArgs(process.argv.slice(2));
+if (parsed.kind === 'help') {
+  process.stdout.write(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'error') {
+  process.stderr.write(`${parsed.message}\n\n${USAGE}`);
+  process.exit(2);
+}
+
+render(
+  <PaletteContext.Provider value={getPalette(parsed.scheme)}>
+    <App />
+  </PaletteContext.Provider>,
+);

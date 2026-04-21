@@ -50,11 +50,14 @@ src/
 │                       nenhum I/O.
 ├── animations.ts     — máquina de estados sliding → merging → spawning → idle.
 │                       renderFrame(anim) devolve um DisplayTile[] por frame.
-├── palette.ts        — cores por valor de tile + PULSE_BG e cores do board.
+├── palette.ts        — tipos Palette/ColorScheme, paletas ansi e truecolor,
+│                       PaletteContext (React Context) + usePalette().
+├── args.ts           — parser de argumentos da CLI (--colors, --help).
 ├── digit-font.ts     — bitmap 3×5 por dígito 0-9 (sub-célula).
 ├── canvas.ts         — canvas de sub-pixels + encoders quadrant/braille.
-├── cli.tsx           — entry Ink. useInput dispara move(); useEffect avança
-│                       frames via setTimeout(frameDurationMs(anim)).
+├── cli.tsx           — entry Ink. Parseia argv, injeta PaletteContext.
+│                       useInput dispara move(); useEffect avança frames via
+│                       setTimeout(frameDurationMs(anim)).
 └── components/
     ├── Board.tsx     — grid 4×4; resolve colisões de célula preferindo tiles
     │                   com pulse.
@@ -141,7 +144,11 @@ invés de tentar corrigir no código.
   terminal do usuário for estreito.
 - **Tamanho do tile**: `TILE_WIDTH` e `TILE_HEIGHT` em `src/components/Tile.tsx`.
   Par visual quadrado (~1:1) pede `cellsWide ≈ 2 × cellsTall`. Atual: 10×5.
-- **Paleta**: `src/palette.ts`. Tiles acima de 8192 caem no `HIGH_FALLBACK`.
+- **Paleta**: `src/palette.ts`. Dois esquemas: `ansi` (padrão, nomes de cor do
+  Ink) e `truecolor` (hex clássico). Cada um define um high-fallback para
+  tiles acima de 8192. Para adicionar um esquema novo: acrescentar ao union
+  `ColorScheme`, construir o objeto `Palette` correspondente e estender
+  `getPalette()`. `COLOR_SCHEMES` é usado pela CLI na mensagem de ajuda.
 - **Timing de animação**: `PHASE_MS` em `src/animations.ts`. Aumentar `sliding`
   torna o movimento mais visível; diminuir deixa o jogo mais snappy.
 - **Fonte dos dígitos**: `src/digit-font.ts`. Mudar dimensão (`DIGIT_W`/

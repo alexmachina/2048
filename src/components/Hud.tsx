@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { usePalette } from '../palette';
 
 type Props = {
   score: number;
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export function Hud({ score, best, gained }: Props) {
+  const palette = usePalette();
   return (
     <Box
       flexDirection="row"
@@ -16,14 +18,14 @@ export function Hud({ score, best, gained }: Props) {
       alignSelf="flex-start"
     >
       <Box flexDirection="column">
-        <Text bold color="#edc22e">
+        <Text bold color={palette.accent}>
           2048
         </Text>
         <Text dimColor>junte os números até 2048</Text>
       </Box>
       <Box flexDirection="row" gap={1}>
         <ScoreCard label="SCORE" value={score} gained={gained} />
-        <ScoreCard label="BEST" value={best} accent="#edc22e" />
+        <ScoreCard label="BEST" value={best} accent={palette.accent} />
       </Box>
     </Box>
   );
@@ -40,7 +42,8 @@ function ScoreCard({
   accent?: string;
   gained?: number;
 }) {
-  const bg = '#bbada0';
+  const palette = usePalette();
+  const bg = palette.scoreBg;
   const width = 10;
   const pad = (s: string) => {
     const rem = Math.max(0, width - s.length);
@@ -49,7 +52,7 @@ function ScoreCard({
   };
   return (
     <Box flexDirection="column">
-      <Text color="#eee4da" backgroundColor={bg} bold>
+      <Text color={palette.scoreLabelFg} backgroundColor={bg} bold>
         {pad(label)}
       </Text>
       <Text color={accent ?? 'white'} backgroundColor={bg} bold>
@@ -60,15 +63,16 @@ function ScoreCard({
 }
 
 export function GameBanner({ won, over }: { won: boolean; over: boolean }) {
+  const palette = usePalette();
   if (over) {
     return (
       <Box
         justifyContent="center"
         borderStyle="round"
-        borderColor="#f65e3b"
+        borderColor={palette.danger}
         paddingX={2}
       >
-        <Text bold color="#f65e3b">
+        <Text bold color={palette.danger}>
           GAME OVER — pressione r para reiniciar
         </Text>
       </Box>
@@ -79,10 +83,10 @@ export function GameBanner({ won, over }: { won: boolean; over: boolean }) {
       <Box
         justifyContent="center"
         borderStyle="round"
-        borderColor="#edc22e"
+        borderColor={palette.accent}
         paddingX={2}
       >
-        <Text bold color="#edc22e">
+        <Text bold color={palette.accent}>
           ★ 2048 ALCANÇADO ★ — continue para bater o recorde
         </Text>
       </Box>
