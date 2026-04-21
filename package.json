@@ -9,6 +9,7 @@
   "scripts": {
     "start": "bun run src/cli.tsx",
     "dev": "bun run src/cli.tsx",
+    "showcase": "bun run src/showcase.tsx",
     "test": "bun test"
   },
   "dependencies": {
