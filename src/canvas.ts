@@ -1,4 +1,4 @@
-import { DIGIT_H, DIGIT_W, bitmapFor } from './digit-font';
+import type { Font } from './fonts';
 
 export type Canvas = number[][];
 export type Encoding = 'braille' | 'quadrant';
@@ -7,22 +7,21 @@ export function createCanvas(width: number, height: number): Canvas {
   return Array.from({ length: height }, () => Array<number>(width).fill(0));
 }
 
-export const LETTER_SPACING = 1;
-
-export function labelWidth(label: string): number {
+export function labelWidth(label: string, font: Font): number {
   if (label.length === 0) return 0;
-  return label.length * DIGIT_W + (label.length - 1) * LETTER_SPACING;
+  return label.length * font.width + (label.length - 1) * font.letterSpacing;
 }
 
 export function drawLabel(
   canvas: Canvas,
   label: string,
   x: number,
-  y: number
+  y: number,
+  font: Font,
 ): void {
   let cx = x;
   for (const ch of label) {
-    const bitmap = bitmapFor(ch);
+    const bitmap = font.glyph(ch);
     if (bitmap) {
       for (let r = 0; r < bitmap.length; r++) {
         for (let c = 0; c < bitmap[r].length; c++) {
@@ -35,7 +34,7 @@ export function drawLabel(
         }
       }
     }
-    cx += DIGIT_W + LETTER_SPACING;
+    cx += font.width + font.letterSpacing;
   }
 }
 
@@ -139,25 +138,32 @@ const SUBPIXELS_PER_CELL: Record<Encoding, { w: number; h: number }> = {
  * Paints `label` centered on a fresh canvas sized for a tile of
  * `cellsWide × cellsTall` terminal cells, then serializes via `encoding`.
  *
- * Quadrant is the default because its chunkier pixels read better as a
- * solid tile stamped with a number. See docs/sub-cell-rendering.md.
+ * Default: **quadrant** — pixels chunky (2×2 por cell), mais legíveis que
+ * braille nos tiles coloridos. Os 4×7 dos fonts novos ficam com folga no
+ * canvas 20×10 (padding de 1 sub-row top, 2 bottom). Use `encoding='braille'`
+ * se quiser a estética pontilhada.
+ *
+ * Se o font declarar `decorateTile`, essa função é chamada depois do
+ * `drawLabel` para pintar ornamentos de tile (ex: costura do split-flap).
  */
 export function labelOnTile(
   label: string,
   cellsWide: number,
   cellsTall: number,
-  encoding: Encoding = 'quadrant'
+  font: Font,
+  encoding: Encoding = 'quadrant',
 ): string[] {
   const { w: sw, h: sh } = SUBPIXELS_PER_CELL[encoding];
   const w = cellsWide * sw;
   const h = cellsTall * sh;
   const canvas = createCanvas(w, h);
   if (label.length > 0) {
-    const lw = labelWidth(label);
+    const lw = labelWidth(label, font);
     const x = Math.max(0, Math.floor((w - lw) / 2));
-    const y = Math.max(0, Math.floor((h - DIGIT_H) / 2));
-    drawLabel(canvas, label, x, y);
+    const y = Math.max(0, Math.floor((h - font.height) / 2));
+    drawLabel(canvas, label, x, y, font);
   }
+  font.decorateTile?.(canvas);
   return encoding === 'braille'
     ? canvasToBraille(canvas)
     : canvasToQuadrant(canvas);

@@ -1,13 +1,14 @@
+import type { Bitmap, Font } from './types';
+
 /**
- * 3×5 pixel bitmap font for digits 0-9.
- * Each digit is a row-major array: `rows[y][x]`, 1 = dot, 0 = empty.
+ * Classic 3×5 bitmap — a tipografia original deste 2048 em terminal.
+ *
+ * Projetada para o encoding QUADRANT (2×2 sub-pixels/cell), onde os glifos
+ * chunky aparecem com bastante presença visual no tile. Inspirada em 7-
+ * segmentos mas com liberdades: '1' tem flag esquerda + base, '4' fechado,
+ * '7' sem travessão. É o font **default** — mantida por legibilidade.
  */
-export const DIGIT_W = 3;
-export const DIGIT_H = 5;
-
-type Bitmap = readonly (readonly number[])[];
-
-const DIGITS: Record<string, Bitmap> = {
+const G: Record<string, Bitmap> = {
   '0': [
     [1, 1, 1],
     [1, 0, 1],
@@ -80,6 +81,12 @@ const DIGITS: Record<string, Bitmap> = {
   ],
 };
 
-export function bitmapFor(ch: string): Bitmap | null {
-  return DIGITS[ch] ?? null;
-}
+export const CLASSIC_FONT: Font = {
+  name: 'classic',
+  width: 3,
+  height: 5,
+  letterSpacing: 1,
+  glyph(ch) {
+    return G[ch] ?? null;
+  },
+};

@@ -18,6 +18,7 @@ import {
 import { Board } from './components/Board';
 import { Hud, GameBanner } from './components/Hud';
 import { PaletteContext, getPalette } from './palette';
+import { FontContext, getFont } from './fonts';
 import { parseCliArgs, USAGE } from './args';
 
 function App() {
@@ -110,6 +111,8 @@ if (parsed.kind === 'error') {
 
 render(
   <PaletteContext.Provider value={getPalette(parsed.scheme)}>
-    <App />
+    <FontContext.Provider value={getFont(parsed.font)}>
+      <App />
+    </FontContext.Provider>
   </PaletteContext.Provider>,
 );

@@ -2,7 +2,7 @@
 
 Por que os números dos tiles são desenhados como bitmap em vez de texto, e
 como a pipeline funciona. Documento vivo — leitura obrigatória antes de mexer
-em `src/canvas.ts`, `src/digit-font.ts` ou `src/components/Tile.tsx`.
+em `src/canvas.ts`, `src/fonts/` ou `src/components/Tile.tsx`.
 
 ## O problema
 
@@ -22,7 +22,7 @@ Duas saídas possíveis:
 
 ## Encodings
 
-### Quadrant — padrão atual
+### Quadrant — padrão
 
 `src/canvas.ts:canvasToQuadrant`
 
@@ -41,6 +41,10 @@ Duas saídas possíveis:
   background do `<Text>` passa limpo.
 - Unicode 1.1 (1993) — suporte universal em qualquer fonte monoespaçada.
 - Visual: pixels chunky, sensação de "tile sólido com número em relevo".
+  Escolhido como default porque a textura cheia dos blocos `▀█▄▌` lê muito
+  melhor sobre a cor do tile do que os dots braille esparsos.
+- Cabe em todos os 5 fonts: `classic` (3×5 → 2×3 cells), `7seg`/`dotmatrix`/
+  `solari`/`nixie` (4×7 → 2×4 cells, com 1-2 sub-rows de padding no tile 5-cell).
 
 ### Braille — alternativa
 
@@ -59,8 +63,9 @@ Duas saídas possíveis:
   ```
 
 - Unicode 3.0 (1999) — suporte amplo.
-- Visual: dots finos, estilo LCD digital / calculadora.
-- Para trocar: `labelOnTile(label, w, h, 'braille')` no `Tile.tsx`.
+- Visual: dots finos, estilo LCD digital / calculadora. Legibilidade menor
+  que quadrant em tiles coloridos — os pontos pequenos quebram a presença
+  visual do dígito. Override via `labelOnTile(label, w, h, font, 'braille')`.
 
 ### Alternativas descartadas
 
@@ -76,34 +81,42 @@ Duas saídas possíveis:
 
 ```
 ┌──────────────────┐
-│  digit-font.ts   │  3×5 bitmap por dígito 0-9 (DIGIT_W, DIGIT_H exportados)
+│     fonts/       │  Font = { width, height, letterSpacing, glyph(ch),
+│                  │            decorateTile?(canvas) }
+│                  │  4 implementações: 7seg, dotmatrix, solari, nixie.
 └────────┬─────────┘
-         │ bitmapFor('2') → number[][]
+         │ font.glyph('2') → Bitmap (readonly number[][])
          ▼
 ┌──────────────────┐
 │    canvas.ts     │  Canvas = number[][] de sub-pixels 0/1
-│                  │  drawLabel(canvas, label, x, y) pinta em (x,y)
+│                  │  drawLabel(canvas, label, x, y, font) pinta em (x,y)
+│                  │  Depois chama font.decorateTile?(canvas) para ornamentos
+│                  │  de tile (costura do split-flap).
 └────────┬─────────┘
-         │ canvasToQuadrant | canvasToBraille
+         │ canvasToQuadrant (default) | canvasToBraille
          ▼
 ┌──────────────────┐
 │   Tile.tsx       │  Uma linha = um <Text> de cellsWide caracteres.
+│                  │  Consome FontContext (useFont) e PaletteContext.
 │                  │  fg = cor do dígito · bg = cor do tile.
 │                  │  Pulse: swap fg↔bg. Dim: dimColor no <Text>.
 └──────────────────┘
 ```
 
-Conveniência: `labelOnTile(label, cellsWide, cellsTall, encoding)` faz tudo —
-aloca o canvas certo para o encoding, centraliza via `floor((w - labelWidth)/2)`,
-pinta, serializa. Retorna `string[]` com uma linha por cell-row.
+Conveniência: `labelOnTile(label, cellsWide, cellsTall, font, encoding?)` faz
+tudo — aloca o canvas certo para o encoding (default braille), centraliza via
+`floor((w - labelWidth)/2)`, pinta, aplica `decorateTile`, serializa. Retorna
+`string[]` com uma linha por cell-row.
 
 ## Dimensões atuais
 
 | | Cells (x × y) | Sub-pixels canvas (x × y) | Aspecto visual |
 |---|---|---|---|
-| Tile | **10 × 5** | 20 × 10 (quadrant) / 20 × 20 (braille) | ~1:1 (quadrado) |
-| Dígito (3×5) | ~1.5 × ~2.5 cells | 3 × 5 sub-pixels | — |
-| Label 4 dígitos | ~7.5 × ~2.5 cells | 15 × 5 sub-pixels | — |
+| Tile | **10 × 5** | 20 × 10 (quadrant, default) / 20 × 20 (braille) | ~1:1 (quadrado) |
+| Dígito `classic` | ~1.5 × ~2.5 cells | 3 × 5 sub-pixels | — |
+| Dígito 4×7 (outros 4) | 2 × ~3.5 cells | 4 × 7 sub-pixels | — |
+| Label 4 dígitos `classic` | ~7.5 × ~2.5 cells | 15 × 5 sub-pixels | — |
+| Label 4 dígitos 4×7 | ~9.5 × ~3.5 cells | 19 × 7 sub-pixels | — |
 
 **Por que 10×5 e não outro tamanho**: cada célula monoespaçada é ~1:2
 (larg:alt), então `cellsWide ≈ 2 × cellsTall` dá um tile visualmente
@@ -132,19 +145,27 @@ célula de alinhamento.
 
 ## Como estender
 
-- **Trocar encoding no Tile**: quarto argumento de `labelOnTile`.
+- **Trocar encoding no Tile**: 5º argumento de `labelOnTile(label, w, h, font,
+  encoding)`.
 - **Adicionar encoding novo**:
   1. Função `canvasToX(canvas)` em `canvas.ts`.
   2. Entry em `SUBPIXELS_PER_CELL`.
   3. Rota em `labelOnTile`.
   4. Testes em `canvas.test.ts` (padrões conhecidos → codepoints esperados).
-- **Aumentar/reduzir dígito**: editar `src/digit-font.ts` (ajustar `DIGIT_W`,
-  `DIGIT_H` e todos os bitmaps). Atenção ao `labelWidth` — se o label máximo
-  ultrapassar `cellsWide * 2` sub-pixels, aumentar o tile ou apertar
-  `LETTER_SPACING`.
+- **Adicionar um font novo**:
+  1. Criar `src/fonts/<nome>.ts` exportando `Font` com `width`, `height`,
+     `letterSpacing`, `glyph(ch)` e opcional `decorateTile(canvas)`.
+  2. Adicionar em `FONTS`, `FONT_NAMES` e `parseFontName` de `src/fonts/index.ts`.
+  3. Adicionar ao union `FontName` em `src/fonts/types.ts`.
+  4. `fonts/fonts.test.ts` já cobre qualquer entry em `FONT_NAMES` via
+     `describe.each` — nenhum teste novo é estritamente necessário, mas vale
+     testar particularidades do font (ex: '4' aberto-topo do Nixie).
+- **Mudar dimensão de um font**: ajustar `width` / `height` e todos os bitmaps.
+  Atenção: `labelWidth('8192') = 4*width + 3*letterSpacing` deve ser ≤ `cellsWide
+  * 2` (sub-pixels horizontais no tile). Com `cellsWide = 10` o limite é 20.
 - **Suportar caracteres extras** (ex: sinal `+` para animação de score ganho):
-  adicionar entry em `DIGITS` map de `digit-font.ts`. `drawLabel` aceita
-  qualquer char como chave — caracteres desconhecidos são ignorados em
+  adicionar entry no map `G` de **cada** font em `src/fonts/`. `drawLabel`
+  aceita qualquer char como chave — caracteres desconhecidos são ignorados em
   silêncio.
 
 ## Testes

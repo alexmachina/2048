@@ -7,8 +7,12 @@ Contexto para o Claude Code trabalhar neste repositório.
 2048 em terminal, escrito em TypeScript, executado por Bun, renderizado com
 Ink 5. A lógica de jogo é pura (sem efeitos colaterais) e separada da UI para
 poder ser testada sem subir um TTY. Números são desenhados como bitmap via
-caracteres Unicode sub-célula (quadrant blocks), não texto — detalhes em
-[`docs/sub-cell-rendering.md`](docs/sub-cell-rendering.md).
+caracteres Unicode sub-célula (default: quadrant blocks 2×2/cell), não
+texto — detalhes em [`docs/sub-cell-rendering.md`](docs/sub-cell-rendering.md).
+Existem 5 tipografias selecionáveis via `--font`: `classic` (default, 3×5),
+`7seg`, `dotmatrix`, `solari`, `nixie` (ver `src/fonts/`). Todos os
+dígitos renderizam em bold (`<Text bold>`), propagado de `TileStyle.bold`
+da palette.
 
 ## Comandos
 
@@ -52,9 +56,15 @@ src/
 │                       renderFrame(anim) devolve um DisplayTile[] por frame.
 ├── palette.ts        — tipos Palette/ColorScheme, paletas ansi e truecolor,
 │                       PaletteContext (React Context) + usePalette().
-├── args.ts           — parser de argumentos da CLI (--colors, --help).
-├── digit-font.ts     — bitmap 3×5 por dígito 0-9 (sub-célula).
+├── fonts/            — tipografias dos números nos tiles.
+│   ├── types.ts      — Font, FontName, Bitmap.
+│   ├── classic.ts    — bitmap 3×5 original (default).
+│   ├── seven-segment.ts, dot-matrix.ts, solari.ts, nixie.ts — bitmaps 4×7.
+│   └── index.ts      — FONTS registry, getFont, parseFontName, FontContext.
+├── args.ts           — parser de argumentos da CLI (--colors, --font, --help).
 ├── canvas.ts         — canvas de sub-pixels + encoders quadrant/braille.
+│                       labelOnTile(label, w, h, font) aplica decorateTile do
+│                       Solari após desenhar os dígitos.
 ├── cli.tsx           — entry Ink. Parseia argv, injeta PaletteContext.
 │                       useInput dispara move(); useEffect avança frames via
 │                       setTimeout(frameDurationMs(anim)).
@@ -102,19 +112,22 @@ contornar a assimetria de centralização da grade de células — texto ASCII
 comum centraliza com precisão de 1 célula, o bitmap chega a ~0.25 célula.
 
 - **Quadrant** (`U+2580..U+259F`, **padrão**): 2×2 sub-pixels por célula.
-  Visual chunky, tile sólido com número em relevo. Suporte universal.
-- **Braille** (`U+2800..U+28FF`): 2×4 sub-pixels por célula. Visual fino,
-  estilo LCD. Mantido em `src/canvas.ts` como alternativa.
+  Visual chunky, tile sólido com número em relevo. Os 4 fonts 4×7 cabem
+  confortavelmente (7 sub-rows em 10-sub-row tile → padding 1 top / 2 bottom).
+- **Braille** (`U+2800..U+28FF`): 2×4 sub-pixels por célula. Visual pontilhado
+  estilo LCD. Override via quinto argumento de `labelOnTile(..., 'braille')`.
+  Mantido como alternativa, mas ruim quando a legibilidade importa em tiles
+  coloridos — escolhido brevemente e revertido após feedback.
 
-Pipeline: `src/digit-font.ts` (bitmap 3×5 por dígito) → `src/canvas.ts` pinta
-em grid 0/1 → `canvasToQuadrant` / `canvasToBraille` serializa em strings de
-caracteres Unicode, uma string por linha de células. Ver
-[`docs/sub-cell-rendering.md`](docs/sub-cell-rendering.md) para bit layouts,
-alternativas descartadas, dimensões e como estender.
+Pipeline: `src/fonts/{nome}.ts` (bitmap por dígito) → `src/canvas.ts` pinta
+em grid 0/1 → `decorateTile` opcional aplica ornamento de tile (costura do
+Solari) → `canvasToBraille` / `canvasToQuadrant` serializa em strings
+Unicode. Ver [`docs/sub-cell-rendering.md`](docs/sub-cell-rendering.md).
 
-**Se precisar adicionar caracteres** (ex: `+` para animação de score) a
-entrada vai em `DIGITS` de `digit-font.ts`. Caracteres desconhecidos são
-ignorados em silêncio por `drawLabel`.
+**Se precisar adicionar caracteres** (ex: `+` para animação de score) o
+bitmap vai no map `G` do font correspondente em `src/fonts/`. Caracteres
+desconhecidos são ignorados em silêncio por `drawLabel`. Para cobrir os 4
+fonts de uma vez, adicione a entrada nos 4 arquivos.
 
 ### Line-height do terminal (dica do usuário)
 
@@ -151,9 +164,14 @@ invés de tentar corrigir no código.
   `getPalette()`. `COLOR_SCHEMES` é usado pela CLI na mensagem de ajuda.
 - **Timing de animação**: `PHASE_MS` em `src/animations.ts`. Aumentar `sliding`
   torna o movimento mais visível; diminuir deixa o jogo mais snappy.
-- **Fonte dos dígitos**: `src/digit-font.ts`. Mudar dimensão (`DIGIT_W`/
-  `DIGIT_H`) exige recalcular se o label-max ainda cabe no canvas
-  (`labelWidth(label) ≤ cellsWide * 2`).
+- **Tipografia dos dígitos**: `src/fonts/`. Para adicionar um font novo:
+  1. Criar `src/fonts/<nome>.ts` com os 10 bitmaps 0-9 e objeto `Font`.
+  2. Adicionar em `FONT_NAMES`, `FONTS` e `parseFontName` de `src/fonts/index.ts`.
+  3. Cobrir com testes em `src/fonts/fonts.test.ts` (describe.each cobre todos).
+  Dimensão limite: `N * (width + letterSpacing) - letterSpacing ≤ cellsWide * 2`
+  (em sub-pixels) para o label máximo "8192" (N=4) caber. Com braille (20
+  sub-pixels horizontais no tile 10-cell), width máximo = 4. Se precisar mais,
+  aumentar `TILE_WIDTH`.
 
 ## Atalho para depurar animações
 

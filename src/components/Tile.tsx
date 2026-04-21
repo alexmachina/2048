@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { usePalette } from '../palette';
+import { useFont } from '../fonts';
 import { labelOnTile } from '../canvas';
 
 export const TILE_WIDTH = 10;
@@ -14,17 +15,24 @@ type Props = {
 
 export function Tile({ value, pulse, dim }: Props) {
   const palette = usePalette();
+  const font = useFont();
   const style = palette.styleForValue(value);
   const label = value === 0 ? '' : String(value);
   const bg = pulse ? palette.pulseBg : style.backgroundColor;
   const fg = pulse ? style.backgroundColor : style.color;
 
-  const lines = labelOnTile(label, TILE_WIDTH, TILE_HEIGHT);
+  const lines = labelOnTile(label, TILE_WIDTH, TILE_HEIGHT, font);
 
   return (
     <Box flexDirection="column">
       {lines.map((line, i) => (
-        <Text key={i} color={fg} backgroundColor={bg} dimColor={dim}>
+        <Text
+          key={i}
+          color={fg}
+          backgroundColor={bg}
+          dimColor={dim}
+          bold={style.bold}
+        >
           {line}
         </Text>
       ))}

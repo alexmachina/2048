@@ -7,6 +7,10 @@ import {
   labelOnTile,
   labelWidth,
 } from './canvas';
+import { getFont } from './fonts';
+
+// Tests usam o 7seg como font de referência (4×7, previsível).
+const FONT = getFont('7seg');
 
 describe('canvas — createCanvas', () => {
   it('creates a zero-filled 2d array of the given size', () => {
@@ -19,15 +23,17 @@ describe('canvas — createCanvas', () => {
 
 describe('canvas — labelWidth', () => {
   it('returns 0 for empty string', () => {
-    expect(labelWidth('')).toBe(0);
+    expect(labelWidth('', FONT)).toBe(0);
   });
-  it('returns 3 for a single digit (3 wide)', () => {
-    expect(labelWidth('7')).toBe(3);
+  it('returns font.width for a single digit', () => {
+    expect(labelWidth('7', FONT)).toBe(FONT.width);
   });
-  it('returns N*3 + (N-1) for N digits with 1-pixel spacing', () => {
-    expect(labelWidth('42')).toBe(7);
-    expect(labelWidth('128')).toBe(11);
-    expect(labelWidth('2048')).toBe(15);
+  it('returns N*width + (N-1)*letterSpacing for N digits', () => {
+    const w = FONT.width;
+    const s = FONT.letterSpacing;
+    expect(labelWidth('42', FONT)).toBe(2 * w + s);
+    expect(labelWidth('128', FONT)).toBe(3 * w + 2 * s);
+    expect(labelWidth('2048', FONT)).toBe(4 * w + 3 * s);
   });
 });
 
@@ -65,33 +71,36 @@ describe('canvas — canvasToBraille', () => {
 });
 
 describe('canvas — drawLabel', () => {
-  it('paints the pixels of a digit at the requested offset', () => {
-    const c = createCanvas(3, 5);
-    drawLabel(c, '0', 0, 0);
-    // Digit '0' bitmap: outline, so corners should be lit.
+  it('paints the corners of 0 bitmap at the given offset', () => {
+    // 7-seg '0' é um retângulo fechado — todos os 4 cantos acesos.
+    const c = createCanvas(FONT.width, FONT.height);
+    drawLabel(c, '0', 0, 0, FONT);
     expect(c[0][0]).toBe(1);
-    expect(c[0][2]).toBe(1);
-    expect(c[4][0]).toBe(1);
-    expect(c[4][2]).toBe(1);
-    // Center pixel (1,1) is empty for '0'.
-    expect(c[1][1]).toBe(0);
-    expect(c[2][1]).toBe(0);
-    expect(c[3][1]).toBe(0);
+    expect(c[0][FONT.width - 1]).toBe(1);
+    expect(c[FONT.height - 1][0]).toBe(1);
+    expect(c[FONT.height - 1][FONT.width - 1]).toBe(1);
+    // middle row do 7-seg '0' é vazio (sem segmento g)
+    const mid = Math.floor(FONT.height / 2);
+    expect(c[mid].every((v) => v === 0)).toBe(true);
   });
 
   it('ignores unknown characters silently', () => {
-    const c = createCanvas(3, 5);
-    drawLabel(c, '?', 0, 0);
+    const c = createCanvas(FONT.width, FONT.height);
+    drawLabel(c, '?', 0, 0, FONT);
     expect(c.flat().every((v) => v === 0)).toBe(true);
   });
 
   it('respects letter spacing between digits', () => {
-    const c = createCanvas(7, 5);
-    drawLabel(c, '11', 0, 0);
-    // digit '1' pattern has column 1 always lit at row 4 ("1 1 1" on the bottom),
-    // and its spine on column 1 of the 3-wide digit → x=1 for first, x=5 for second
-    expect(c[4][1]).toBe(1); // first '1' bottom row, col 1
-    expect(c[4][5]).toBe(1); // second '1' bottom row, col 1 (after 3+1 spacing)
+    const w = FONT.width;
+    const s = FONT.letterSpacing;
+    const c = createCanvas(2 * w + s, FONT.height);
+    drawLabel(c, '88', 0, 0, FONT);
+    // 7-seg '8' tem col 0 e col (w-1) ligadas na row 0
+    expect(c[0][0]).toBe(1);
+    expect(c[0][w - 1]).toBe(1);
+    // segundo '8' começa em x = w + s
+    expect(c[0][w + s]).toBe(1);
+    expect(c[0][2 * w + s - 1]).toBe(1);
   });
 });
 
@@ -128,31 +137,51 @@ describe('canvas — canvasToQuadrant', () => {
 });
 
 describe('canvas — labelOnTile', () => {
-  it('defaults to quadrant encoding with cellsTall lines', () => {
-    const lines = labelOnTile('', 8, 3);
-    expect(lines.length).toBe(3);
-    expect([...lines[0]].length).toBe(8);
+  it('default é quadrant — emite cellsTall linhas com espaços em tile vazio', () => {
+    const lines = labelOnTile('', 10, 5, FONT);
+    expect(lines.length).toBe(5);
+    expect([...lines[0]].length).toBe(10);
     expect([...lines[0]].every((ch) => ch === ' ')).toBe(true);
   });
 
-  it('produces braille lines when encoding=braille', () => {
-    const lines = labelOnTile('', 8, 3, 'braille');
-    expect(lines.length).toBe(3);
+  it('permite override para braille encoding', () => {
+    const lines = labelOnTile('', 10, 5, FONT, 'braille');
+    expect(lines.length).toBe(5);
     expect([...lines[0]].every((ch) => ch === '\u2800')).toBe(true);
   });
 
-  it('paints a single-digit label somewhere in the tile (quadrant)', () => {
-    const lines = labelOnTile('2', 8, 3, 'quadrant');
+  it('pinta um label de 1 dígito em algum lugar do tile (quadrant)', () => {
+    const lines = labelOnTile('2', 10, 5, FONT);
     expect(lines.some((l) => [...l].some((ch) => ch !== ' '))).toBe(true);
   });
 
-  it('paints a single-digit label somewhere in the tile (braille)', () => {
-    const lines = labelOnTile('2', 8, 3, 'braille');
-    expect(lines.some((l) => [...l].some((ch) => ch !== '\u2800'))).toBe(true);
+  it('label de 4 dígitos cabe em tile 10×5', () => {
+    const lines = labelOnTile('2048', 10, 5, FONT);
+    expect(lines.every((l) => [...l].length === 10)).toBe(true);
   });
 
-  it('fits a 4-digit label within 8 cells of width (quadrant)', () => {
-    const lines = labelOnTile('2048', 8, 3, 'quadrant');
-    expect(lines.every((l) => [...l].length === 8)).toBe(true);
+  it('aplica font.decorateTile se presente — costura do solari em quadrant', () => {
+    const solari = getFont('solari');
+    const lines = labelOnTile('', 10, 5, solari);
+    // Costura é em sub-rows mid-1 e mid do canvas 10-tall (quadrant) → rows
+    // 4 e 5, que caem inteiramente na quadrant cell-row 2 (sub-rows 4-5),
+    // preenchendo os 4 quadrants → cada cell vira bloco completo '█' (U+2588).
+    const midCellRow = 2;
+    const cells = [...lines[midCellRow]];
+    for (const ch of cells) {
+      expect(ch).toBe('\u2588');
+    }
+  });
+
+  it('aplica font.decorateTile também em encoding braille', () => {
+    const solari = getFont('solari');
+    const lines = labelOnTile('', 10, 5, solari, 'braille');
+    // Em braille, canvas é 20-tall, mid=10, rows 9 e 10 ficam na braille cell-
+    // row 2 (sub-rows 8-11), bits 0x02+0x10+0x04+0x20 = 0x36 → codepoint 0x2836 '⠶'.
+    const midCellRow = 2;
+    const cells = [...lines[midCellRow]];
+    for (const ch of cells) {
+      expect(ch).toBe('\u2836');
+    }
   });
 });

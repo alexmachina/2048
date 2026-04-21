@@ -52,6 +52,32 @@ bun run start -- --help               # lista as opções
 
 Valores aceitos: `ansi` (padrão), `truecolor`.
 
+### Tipografia dos números
+
+Os dígitos nos tiles são desenhados como bitmaps em sub-pixel. Existem
+cinco tipografias, inspiradas em famílias clássicas de displays:
+
+| Flag                    | Dimensão | Heritage                                            |
+| ----------------------- | -------- | --------------------------------------------------- |
+| `--font classic`        | 3×5      | Font original do 2048 em terminal — **padrão**      |
+| `--font 7seg`           | 4×7      | LCD calculadora/despertador (88:88)                 |
+| `--font dotmatrix`      | 4×7      | Scoreboard LED (Fenway Park)                        |
+| `--font solari`         | 4×7      | Split-flap de aeroporto — com costura horizontal    |
+| `--font nixie`          | 4×7      | Tubo a gás Nixie — '4' com topo aberto, '1' com flag |
+
+```bash
+bun run start -- --font 7seg
+bun run start -- --font solari --colors truecolor
+```
+
+Aliases aceitos: `original`/`default` (→ classic), `seven-segment`,
+`dot-matrix`, `split-flap`, `tube`.
+
+Todos os dígitos renderizam em **bold** para maximizar contraste sobre a
+cor do tile — em terminais 16-color isso intensifica as cores ANSI, em
+terminais com fonte monoespaçada de múltiplos pesos isso engrossa os
+traços dos blocos Unicode.
+
 ## Controles
 
 | Tecla                 | Ação           |
@@ -74,6 +100,9 @@ src/
 ├── animations.ts      — máquina de estados de frames (sliding → merging → spawning → idle)
 ├── animations.test.ts — testes das transições e do render por frame
 ├── palette.ts         — esquemas de cor (ansi, truecolor) + PaletteContext
+├── fonts/             — 4 tipografias de dígitos + FontContext
+│   ├── seven-segment.ts, dot-matrix.ts, solari.ts, nixie.ts
+│   └── index.ts
 ├── args.ts            — parser de argumentos da CLI
 ├── cli.tsx            — entrypoint: input, loop de frames, layout
 └── components/
