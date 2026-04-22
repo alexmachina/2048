@@ -23,9 +23,12 @@ export const DEFAULT_COLOR_SCHEME: ColorScheme = 'ansi';
 
 export const COLOR_SCHEMES: readonly ColorScheme[] = ['ansi', 'truecolor'];
 
+// Empty tile: bg ligeiramente mais claro que o color. O color é usado como
+// cor do frame arredondado (╭─╮╰─╯), então precisa contrastar com o bg
+// — sem isso, 3 empty tiles empilhados viram uma barra única.
 const TRUECOLOR_EMPTY: TileStyle = {
   backgroundColor: '#3a3a3a',
-  color: '#3a3a3a',
+  color: '#2a2a2a',
 };
 
 const TRUECOLOR_TILES: Record<number, TileStyle> = {
@@ -66,7 +69,13 @@ const TRUECOLOR_PALETTE: Palette = {
 
 // ANSI — usa nomes de cor do Ink (black, red, yellow, …, *Bright) para
 // respeitar o tema do terminal do usuário em vez de fixar em hex.
-const ANSI_EMPTY: TileStyle = { backgroundColor: 'gray', color: 'gray' };
+//
+// Empty tile: color (frame) precisa ser um tom distinto do backgroundColor
+// pra que o arco arredondado apareça. Sem isso, empty tiles empilhados
+// fundem em uma barra única de cinza.
+// `gray` e `blackBright` são aliases no chalk/Ink (ambos ANSI 90), por isso
+// o color precisa ser `black` (ANSI 30) pra garantir contraste real.
+const ANSI_EMPTY: TileStyle = { backgroundColor: 'gray', color: 'black' };
 
 const ANSI_TILES: Record<number, TileStyle> = {
   2: { backgroundColor: 'white', color: 'black', bold: true },

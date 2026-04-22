@@ -39,6 +39,10 @@ export function Board({ displayTiles }: Props) {
         <Box key={`r${r}`} flexDirection="row" marginTop={r === 0 ? 0 : 1}>
           {Array.from({ length: BOARD_SIZE }).map((_, c) => {
             const cell = cells[r][c];
+            // Gap 1 cell em ambos os eixos. Mesmo com aspect ratio do
+            // terminal (~1:2), 1 row vertical é pouco (não dobra nem triplica
+            // o visual) e 1 col horizontal evita `╯╭` colado — o breathing
+            // room necessário pra tiles se lerem como elementos distintos.
             return (
               <Box key={`c${c}`} marginLeft={c === 0 ? 0 : 1}>
                 <Tile

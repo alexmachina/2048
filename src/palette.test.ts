@@ -47,9 +47,12 @@ describe('getPalette truecolor', () => {
     expect(high.color).toBe('#edc22e');
   });
 
-  test('valor 0 retorna o estilo de célula vazia', () => {
+  test('valor 0 retorna o estilo de célula vazia (color ≠ bg pra frame visível)', () => {
+    // Com o frame arredondado desenhado nos tiles, o `color` vira a cor do
+    // arco (╭─╮│╰─╯). Se fosse igual ao bg, o frame sumiria e tiles vazios
+    // empilhados fundiriam em uma barra única.
     const empty = p.styleForValue(0);
-    expect(empty.backgroundColor).toBe(empty.color);
+    expect(empty.backgroundColor).not.toBe(empty.color);
   });
 
   test('todas as cores expostas são hex', () => {
@@ -100,9 +103,11 @@ describe('getPalette ansi', () => {
     expect(seen.size).toBeGreaterThanOrEqual(Math.ceil(values.length / 2));
   });
 
-  test('valor 0 retorna célula vazia (bg === fg)', () => {
+  test('valor 0 retorna célula vazia (color ≠ bg pra frame visível)', () => {
+    // Ver nota no equivalente truecolor acima — `color` é cor do frame
+    // arredondado e precisa contrastar com bg.
     const empty = p.styleForValue(0);
-    expect(empty.backgroundColor).toBe(empty.color);
+    expect(empty.backgroundColor).not.toBe(empty.color);
   });
 
   test('tiles acima de 8192 caem no high fallback', () => {
