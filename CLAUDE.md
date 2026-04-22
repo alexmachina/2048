@@ -20,8 +20,10 @@ da palette.
 bun install              # instalar dependências
 bun run start            # rodar o jogo (precisa de TTY real)
 bun run src/cli.tsx      # equivalente
+bun run showcase         # TUI storybook do design system (tiles, fonts,
+                         #   paletas, encodings) — também precisa de TTY
 
-bun test                 # rodar testes (47 no momento)
+bun test                 # rodar testes (suite cresce — conferir saída)
 bunx tsc --noEmit        # checagem de tipos (autoritativo — diagnostics do
                          #   LSP podem ficar stale; confie no exit code do tsc)
 ```
@@ -68,6 +70,11 @@ src/
 ├── cli.tsx           — entry Ink. Parseia argv, injeta PaletteContext.
 │                       useInput dispara move(); useEffect avança frames via
 │                       setTimeout(frameDurationMs(anim)).
+├── showcase.tsx      — entry Ink do storybook interativo. Consome
+│                       showcase-state via useReducer + useInput.
+├── showcase-state.ts — reducer puro do storybook (seções, índices,
+│                       toggles). Testável sem montar Ink — mesmo split
+│                       engine/cli aplicado à TUI interativa.
 └── components/
     ├── Board.tsx     — grid 4×4; resolve colisões de célula preferindo tiles
     │                   com pulse.
@@ -103,6 +110,15 @@ Qualquer célula preenchida é feita empilhando linhas de `<Text>` com
 recusa em silêncio via o `LiteralUnion` e o diagnostic fica inconsistente.
 
 Se subir para Ink 7, reavaliar — várias APIs mudam.
+
+### Tile hardcoda quadrant encoding
+
+`Tile.tsx` passa `labelOnTile(..., font)` sem o quinto argumento, então
+sempre renderiza em quadrant. Isso é intencional para o jogo. Se precisar
+de outro encoding (ex: showcase comparando quadrant vs braille), duplique
+inline em vez de adicionar uma prop `encoding` — a superfície da API ganha
+uma opção que 99% dos call sites nunca usa. Ver `EncodedTile` em
+`src/showcase.tsx` como referência.
 
 ### Rendering dos números (sub-célula)
 
