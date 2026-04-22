@@ -20,6 +20,7 @@ import { Hud, GameBanner } from './components/Hud';
 import { PaletteContext, getPalette } from './palette';
 import { FontContext, getFont } from './fonts';
 import { parseCliArgs, USAGE } from './args';
+import { enableSyncOutput } from './sync-output';
 
 function App() {
   const { exit } = useApp();
@@ -108,6 +109,10 @@ if (parsed.kind === 'error') {
   process.stderr.write(`${parsed.message}\n\n${USAGE}`);
   process.exit(2);
 }
+
+// Antes do render: ativa synchronized output mode (DECSET 2026) pra eliminar
+// flicker em terminais GPU-accelerated tipo Alacritty. No-op em Terminal.app.
+enableSyncOutput();
 
 render(
   <PaletteContext.Provider value={getPalette(parsed.scheme)}>

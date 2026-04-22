@@ -15,6 +15,7 @@ import {
   type ShowcaseState,
   type Action,
 } from './showcase-state';
+import { enableSyncOutput } from './sync-output';
 
 // ──────────────────────────────────────────────────────────────────
 // Section copy — explanations shown alongside each view. The point of
@@ -383,4 +384,5 @@ function Footer() {
 
 // ──────────────────────────────────────────────────────────────────
 
+enableSyncOutput();
 render(<App />);
