@@ -21,12 +21,20 @@ import { PaletteContext, getPalette } from './palette';
 import { FontContext, getFont } from './fonts';
 import { parseCliArgs, USAGE } from './args';
 import { enableSyncOutput } from './sync-output';
+import {
+  canUndo,
+  initHistory,
+  pushMove,
+  undo as applyUndo,
+  type History,
+} from './undo';
 
 function App() {
   const { exit } = useApp();
   const [state, setState] = useState<GameState>(() => createInitialState());
   const [anim, setAnim] = useState<MoveAnimation>(() => idleAnim(state));
   const [lastGained, setLastGained] = useState<number | undefined>(undefined);
+  const [history, setHistory] = useState<History>(() => initHistory());
   const animRef = useRef(anim);
   animRef.current = anim;
 
@@ -40,8 +48,21 @@ function App() {
       setState(fresh);
       setAnim(idleAnim(fresh));
       setLastGained(undefined);
+      setHistory(initHistory());
       return;
     }
+    if (input === 'u') {
+      // Undo — só durante idle, e só se tiver histórico.
+      if (animRef.current.phase !== 'idle') return;
+      const result = applyUndo(history, state);
+      if (result === null) return;
+      setState(result.state);
+      setAnim(idleAnim(result.state));
+      setHistory(result.history);
+      setLastGained(undefined);
+      return;
+    }
+
     if (animRef.current.phase !== 'idle') return;
     if (state.over) return;
 
@@ -53,10 +74,11 @@ function App() {
     if (!dir) return;
 
     const next = move(state, dir, Math.random);
-    if (next === state) return;
+    if (next === state) return; // move sem efeito — não registra no histórico
 
     const gained = next.score - state.score;
     setLastGained(gained > 0 ? gained : undefined);
+    setHistory((h) => pushMove(h, state, next));
     setState(next);
     setAnim(planMove(next));
   });
@@ -82,6 +104,7 @@ function App() {
   }, [anim.phase, lastGained]);
 
   const displayTiles = renderFrame(anim);
+  const undoAvailable = canUndo(history);
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
@@ -92,8 +115,11 @@ function App() {
       <GameBanner won={state.won} over={state.over} />
       <Box height={state.won || state.over ? 1 : 0} />
       <Text color="gray">
-        ↑ ↓ ← → ou <Text color="white" bold>w a s d</Text> para mover ·{' '}
-        <Text color="white" bold>r</Text> reinicia ·{' '}
+        ↑ ↓ ← → ou <Text color="white" bold>w a s d</Text> move ·{' '}
+        <Text color={undoAvailable ? 'white' : 'gray'} bold={undoAvailable}>
+          u
+        </Text>{' '}
+        desfaz · <Text color="white" bold>r</Text> reinicia ·{' '}
         <Text color="white" bold>q</Text> sai
       </Text>
     </Box>
