@@ -17,8 +17,9 @@ import {
 } from './animations';
 import { Board } from './components/Board';
 import { Hud, GameBanner } from './components/Hud';
+import { Setup } from './components/Setup';
 import { PaletteContext, getPalette } from './palette';
-import { FontContext, getFont } from './fonts';
+import { FontContext, getFont, FONT_NAMES, type FontName } from './fonts';
 import { parseCliArgs, USAGE } from './args';
 import { enableSyncOutput } from './sync-output';
 import {
@@ -29,17 +30,53 @@ import {
   type History,
 } from './undo';
 
-function App() {
+type Mode = 'playing' | 'setup';
+
+function App({ initialFont }: { initialFont: FontName }) {
   const { exit } = useApp();
   const [state, setState] = useState<GameState>(() => createInitialState());
   const [anim, setAnim] = useState<MoveAnimation>(() => idleAnim(state));
   const [lastGained, setLastGained] = useState<number | undefined>(undefined);
   const [history, setHistory] = useState<History>(() => initHistory());
+  const [fontName, setFontName] = useState<FontName>(initialFont);
+  const [mode, setMode] = useState<Mode>('playing');
+  const [setupIdx, setSetupIdx] = useState<number>(() =>
+    Math.max(0, FONT_NAMES.indexOf(initialFont)),
+  );
   const animRef = useRef(anim);
   animRef.current = anim;
 
   useInput((input, key) => {
-    if (input === 'q' || key.escape || (key.ctrl && input === 'c')) {
+    // Exit é sempre disponível — até em setup mode, Ctrl+C / q encerram.
+    if (input === 'q' || (key.ctrl && input === 'c')) {
+      exit();
+      return;
+    }
+
+    // ── Setup mode ───────────────────────────────────────────────
+    if (mode === 'setup') {
+      if (key.escape) {
+        setMode('playing');
+        return;
+      }
+      if (key.upArrow || input === 'k') {
+        setSetupIdx((i) => (i - 1 + FONT_NAMES.length) % FONT_NAMES.length);
+        return;
+      }
+      if (key.downArrow || input === 'j') {
+        setSetupIdx((i) => (i + 1) % FONT_NAMES.length);
+        return;
+      }
+      if (key.return) {
+        setFontName(FONT_NAMES[setupIdx]);
+        setMode('playing');
+        return;
+      }
+      return;
+    }
+
+    // ── Playing mode ─────────────────────────────────────────────
+    if (key.escape) {
       exit();
       return;
     }
@@ -49,6 +86,12 @@ function App() {
       setAnim(idleAnim(fresh));
       setLastGained(undefined);
       setHistory(initHistory());
+      return;
+    }
+    if (input === 'f') {
+      // Abre o modal com a seleção focada na fonte atual
+      setSetupIdx(Math.max(0, FONT_NAMES.indexOf(fontName)));
+      setMode('setup');
       return;
     }
     if (input === 'u') {
@@ -105,24 +148,36 @@ function App() {
 
   const displayTiles = renderFrame(anim);
   const undoAvailable = canUndo(history);
+  const currentFont = getFont(fontName);
 
   return (
-    <Box flexDirection="column" paddingX={1} paddingY={1}>
-      <Hud score={state.score} best={state.best} gained={lastGained} />
-      <Box height={1} />
-      <Board displayTiles={displayTiles} />
-      <Box height={1} />
-      <GameBanner won={state.won} over={state.over} />
-      <Box height={state.won || state.over ? 1 : 0} />
-      <Text color="gray">
-        ↑ ↓ ← → ou <Text color="white" bold>w a s d</Text> move ·{' '}
-        <Text color={undoAvailable ? 'white' : 'gray'} bold={undoAvailable}>
-          u
-        </Text>{' '}
-        desfaz · <Text color="white" bold>r</Text> reinicia ·{' '}
-        <Text color="white" bold>q</Text> sai
-      </Text>
-    </Box>
+    <FontContext.Provider value={currentFont}>
+      <Box flexDirection="column" paddingX={1} paddingY={1}>
+        <Hud score={state.score} best={state.best} gained={lastGained} />
+        <Box height={1} />
+        {mode === 'setup' ? (
+          <Setup current={fontName} selectedIdx={setupIdx} />
+        ) : (
+          <Board displayTiles={displayTiles} />
+        )}
+        <Box height={1} />
+        {mode === 'playing' && (
+          <>
+            <GameBanner won={state.won} over={state.over} />
+            <Box height={state.won || state.over ? 1 : 0} />
+            <Text color="gray">
+              ↑ ↓ ← → ou <Text color="white" bold>w a s d</Text> move ·{' '}
+              <Text color={undoAvailable ? 'white' : 'gray'} bold={undoAvailable}>
+                u
+              </Text>{' '}
+              desfaz · <Text color="white" bold>f</Text> fonte ·{' '}
+              <Text color="white" bold>r</Text> reinicia ·{' '}
+              <Text color="white" bold>q</Text> sai
+            </Text>
+          </>
+        )}
+      </Box>
+    </FontContext.Provider>
   );
 }
 
@@ -142,8 +197,6 @@ enableSyncOutput();
 
 render(
   <PaletteContext.Provider value={getPalette(parsed.scheme)}>
-    <FontContext.Provider value={getFont(parsed.font)}>
-      <App />
-    </FontContext.Provider>
+    <App initialFont={parsed.font} />
   </PaletteContext.Provider>,
 );
