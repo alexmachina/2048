@@ -15,8 +15,10 @@ import type { Bitmap, Font } from './types';
  *      dddd              row 6
  * ```
  *
- * O '1' é **right-aligned** nos segmentos `b` + `c` — autêntico ao display
- * real (onde o '1' sempre parece "flutuando à direita").
+ * O '1' originalmente era `b` + `c` right-aligned (autêntico ao display real,
+ * onde o '1' flutua à direita). Foi centralizado e engrossado pra 2 cells de
+ * largura porque, contra tiles coloridos, o '1' canônico pesava visualmente
+ * ~4 pixels contra 18-24 dos outros dígitos — ficava "sumido" ao lado do 6.
  */
 const G: Record<string, Bitmap> = {
   '0': [
@@ -30,11 +32,11 @@ const G: Record<string, Bitmap> = {
   ],
   '1': [
     [0, 0, 0, 0],
-    [0, 0, 0, 1],
-    [0, 0, 0, 1],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
     [0, 0, 0, 0],
-    [0, 0, 0, 1],
-    [0, 0, 0, 1],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
     [0, 0, 0, 0],
   ],
   '2': [
